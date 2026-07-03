@@ -1,0 +1,33 @@
+---
+# Déploiement d'un service Apache de base sur une VM Linux (US-007).
+# Appelé par InfraOne : ansible-playbook deploy-apache.yml -i "<ip>," -u <user>
+- name: Déployer Apache (configuration de base)
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    apache_pkg: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+    apache_svc: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+  tasks:
+    - name: Installer le paquet Apache
+      ansible.builtin.package:
+        name: "{{ apache_pkg }}"
+        state: present
+
+    - name: Page d'accueil de démonstration
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        mode: "0644"
+        content: |
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <title>Déployé par InfraOne</title></head>
+          <body style="font-family:sans-serif;text-align:center;margin-top:12vh">
+          <h1>✅ Apache déployé par InfraOne</h1>
+          <p>Hôte : {{ ansible_hostname }} — {{ ansible_default_ipv4.address | default('n/a') }}</p>
+          </body></html>
+
+    - name: Démarrer et activer Apache
+      ansible.builtin.service:
+        name: "{{ apache_svc }}"
+        state: started
+        enabled: true

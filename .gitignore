@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+backend/.venv/
+.venv/
+
+# Données runtime InfraOne
+backend/data/
+
+# Secrets / configuration locale (NE PAS committer)
+config/infraone.env
+
+# OS / éditeurs
+.DS_Store
+*.swp
+.idea/
+.vscode/

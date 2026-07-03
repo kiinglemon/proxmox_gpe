@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InfraOne — Console d'automatisation Proxmox</title>
+<style>
+  :root{--bg:#0f172a;--panel:#1e293b;--panel2:#273449;--line:#334155;--txt:#e2e8f0;
+        --muted:#94a3b8;--pri:#2563eb;--pri2:#1d4ed8;--ok:#16a34a;--warn:#d97706;--err:#dc2626;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;
+         background:var(--panel);border-bottom:1px solid var(--line)}
+  header h1{font-size:17px;margin:0;letter-spacing:.5px}
+  header .sub{color:var(--muted);font-size:12px;margin-left:8px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+  .badge.mock{background:#78350f33;color:#fbbf24;border-color:#92400e}
+  .badge.real{background:#14532d33;color:#4ade80;border-color:#166534}
+  main{max-width:1100px;margin:0 auto;padding:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{margin:0 0 14px;font-size:15px}
+  .grid{display:grid;gap:18px;grid-template-columns:1fr}
+  @media(min-width:900px){.grid.two{grid-template-columns:1fr 1fr}}
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+  input,select{width:100%;padding:9px 10px;background:var(--panel2);border:1px solid var(--line);
+        border-radius:7px;color:var(--txt);font-size:14px}
+  button{cursor:pointer;border:0;border-radius:7px;padding:9px 14px;font-size:13px;font-weight:600;
+        background:var(--pri);color:#fff}
+  button:hover{background:var(--pri2)}
+  button.sm{padding:5px 9px;font-size:12px;font-weight:500}
+  button.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+  button.danger{background:var(--err)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+  .row>div{flex:1;min-width:120px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .pill{font-size:11px;padding:2px 8px;border-radius:999px}
+  .pill.running{background:#14532d;color:#4ade80}
+  .pill.stopped{background:#3f3f46;color:#d4d4d8}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .muted{color:var(--muted)}
+  .hidden{display:none!important}
+  #login{max-width:380px;margin:8vh auto}
+  #login .card{padding:26px}
+  .brand{text-align:center;margin-bottom:18px}
+  .brand .logo{font-size:26px;font-weight:800;letter-spacing:1px;color:#fff}
+  .brand .logo span{color:var(--pri)}
+  .toast{position:fixed;right:16px;bottom:16px;max-width:360px;padding:12px 14px;border-radius:8px;
+        font-size:13px;box-shadow:0 6px 20px #0008;z-index:50}
+  .toast.ok{background:#14532d;color:#dcfce7;border:1px solid #166534}
+  .toast.err{background:#450a0a;color:#fee2e2;border:1px solid #7f1d1d}
+  .logline{font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:5px 0;border-bottom:1px solid #1e293b}
+  .lvl{display:inline-block;width:64px;font-weight:700}
+  .lvl.INFO{color:#60a5fa}.lvl.WARNING{color:#fbbf24}.lvl.ERROR{color:#f87171}
+  a.link{color:#60a5fa;cursor:pointer;font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- ===================== ÉCRAN DE CONNEXION (US-001/US-002) ================ -->
+<section id="login">
+  <div class="brand"><div class="logo">Infra<span>One</span></div>
+    <div class="muted">Console d'automatisation Proxmox — TIC-GPE5</div></div>
+  <div class="card">
+    <div id="loginForm">
+      <label>Identifiant</label>
+      <input id="username" autocomplete="username" value="admin">
+      <label>Mot de passe</label>
+      <input id="password" type="password" autocomplete="current-password">
+      <div style="margin-top:16px"><button style="width:100%" onclick="doLogin()">Se connecter</button></div>
+      <div style="margin-top:12px;text-align:center">
+        <a class="link" onclick="showForgot()">Mot de passe oublié ?</a></div>
+    </div>
+    <div id="forgotForm" class="hidden">
+      <label>Identifiant du compte</label>
+      <input id="forgotUser" value="admin">
+      <div style="margin-top:16px"><button style="width:100%" onclick="doForgot()">Générer un lien de réinitialisation</button></div>
+      <div id="resetBlock" class="hidden">
+        <label>Jeton de réinitialisation</label>
+        <input id="resetToken">
+        <label>Nouveau mot de passe</label>
+        <input id="newPass" type="password">
+        <div style="margin-top:16px"><button style="width:100%" onclick="doReset()">Réinitialiser</button></div>
+      </div>
+      <div style="margin-top:12px;text-align:center"><a class="link" onclick="showLogin()">← Retour à la connexion</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== APPLICATION ================================= -->
+<div id="app" class="hidden">
+  <header>
+    <div><h1>Infra<span style="color:#2563eb">One</span></h1>
+      <span class="sub">Console d'automatisation Proxmox</span></div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span id="modeBadge" class="badge"></span>
+      <span class="muted" id="whoami"></span>
+      <button class="ghost sm" onclick="logout()">Déconnexion</button>
+    </div>
+  </header>
+  <main>
+    <div class="grid two">
+      <!-- Création VM (US-003) -->
+      <div class="card">
+        <h2>Créer une VM Linux</h2>
+        <label>Nom (a-z, 0-9, tiret)</label>
+        <input id="vmName" placeholder="web-demo-01">
+        <div class="row" style="margin-top:8px">
+          <div><label>vCPU</label><input id="vmCores" type="number" value="1" min="1"></div>
+          <div><label>RAM (Mo)</label><input id="vmMem" type="number" value="1024" min="256" step="256"></div>
+          <div><label>Disque (Go)</label><input id="vmDisk" type="number" value="8" min="4"></div>
+        </div>
+        <div style="margin-top:14px"><button onclick="createVM()">Déployer la VM</button></div>
+        <p class="muted" style="margin:10px 0 0;font-size:12px">
+          Hôte 10 Go / 4 vCPU : valeurs par défaut volontairement modestes.</p>
+      </div>
+
+      <!-- Déploiement service (US-007) -->
+      <div class="card">
+        <h2>Déployer un service (Ansible)</h2>
+        <label>VM cible (ID)</label>
+        <input id="svcVmid" type="number" placeholder="ex : 100">
+        <label>Service</label>
+        <select id="svcName"><option value="nginx">Nginx</option><option value="apache">Apache</option></select>
+        <label>Hôte / IP (optionnel si agent QEMU actif)</label>
+        <input id="svcHost" placeholder="192.168.x.x">
+        <div style="margin-top:14px"><button onclick="deployService()">Installer le service</button></div>
+      </div>
+    </div>
+
+    <!-- Liste des VMs (US-004/US-005) -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2 style="margin:0">Machines virtuelles</h2>
+        <button class="ghost sm" onclick="loadVMs()">Rafraîchir</button>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>ID</th><th>Nom</th><th>État</th><th>vCPU</th><th>RAM</th><th>Actions</th></tr></thead>
+        <tbody id="vmRows"><tr><td colspan="6" class="muted">Chargement…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- Journal (US-006) -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2 style="margin:0">Journal d'évènements &amp; erreurs</h2>
+        <div class="row" style="flex:0">
+          <select id="logLevel" onchange="loadLogs()" style="width:auto">
+            <option value="">Tous</option><option>INFO</option><option>WARNING</option><option>ERROR</option>
+          </select>
+          <button class="ghost sm" onclick="loadLogs()">Rafraîchir</button>
+        </div>
+      </div>
+      <div id="logBox"><div class="muted">Chargement…</div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = "";                       // même origine
+let TOKEN = localStorage.getItem("infraone_token") || "";
+let USER  = localStorage.getItem("infraone_user")  || "";
+
+function toast(msg, ok=true){
+  const t=document.createElement("div");
+  t.className="toast "+(ok?"ok":"err"); t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>t.remove(), ok?3500:6000);
+}
+async function api(path, opts={}){
+  opts.headers = Object.assign({"Content-Type":"application/json"}, opts.headers||{});
+  if(TOKEN) opts.headers["Authorization"]="Bearer "+TOKEN;
+  const r = await fetch(API+path, opts);
+  let data=null; try{data=await r.json();}catch(e){}
+  if(r.status===401){ logout(); throw new Error("Session expirée, reconnectez-vous."); }
+  if(!r.ok){ throw new Error((data&&(data.detail||data.message))||("Erreur "+r.status)); }
+  return data;
+}
+
+/* ---------- Authentification ---------- */
+function showForgot(){document.getElementById("loginForm").classList.add("hidden");
+  document.getElementById("forgotForm").classList.remove("hidden");}
+function showLogin(){document.getElementById("forgotForm").classList.add("hidden");
+  document.getElementById("loginForm").classList.remove("hidden");}
+async function doLogin(){
+  try{
+    const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({
+      username:document.getElementById("username").value,
+      password:document.getElementById("password").value})});
+    TOKEN=d.access_token; USER=d.username;
+    localStorage.setItem("infraone_token",TOKEN); localStorage.setItem("infraone_user",USER);
+    enterApp();
+  }catch(e){toast(e.message,false);}
+}
+async function doForgot(){
+  try{
+    const d=await api("/api/auth/forgot-password",{method:"POST",body:JSON.stringify({
+      username:document.getElementById("forgotUser").value})});
+    toast(d.message,true);
+    if(d.data && d.data.reset_token){
+      document.getElementById("resetBlock").classList.remove("hidden");
+      document.getElementById("resetToken").value=d.data.reset_token;   // MVP démo
+    }
+  }catch(e){toast(e.message,false);}
+}
+async function doReset(){
+  try{
+    const d=await api("/api/auth/reset-password",{method:"POST",body:JSON.stringify({
+      token:document.getElementById("resetToken").value,
+      new_password:document.getElementById("newPass").value})});
+    toast(d.message,true); showLogin();
+  }catch(e){toast(e.message,false);}
+}
+function logout(){
+  TOKEN="";USER=""; localStorage.removeItem("infraone_token"); localStorage.removeItem("infraone_user");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
+}
+async function enterApp(){
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("whoami").textContent=USER;
+  try{
+    const h=await api("/api/health");
+    const b=document.getElementById("modeBadge");
+    b.textContent = h.mock_proxmox ? "MODE DÉMO (mock)" : "Proxmox "+h.node;
+    b.className = "badge "+(h.mock_proxmox?"mock":"real");
+  }catch(e){}
+  loadVMs(); loadLogs();
+}
+
+/* ---------- VMs ---------- */
+async function loadVMs(){
+  const tb=document.getElementById("vmRows");
+  try{
+    const vms=await api("/api/vms");
+    if(!vms.length){tb.innerHTML='<tr><td colspan="6" class="muted">Aucune VM. Créez-en une ci-dessus.</td></tr>';return;}
+    tb.innerHTML=vms.map(v=>`<tr>
+      <td>${v.vmid}</td><td>${v.name}</td>
+      <td><span class="pill ${v.status==='running'?'running':'stopped'}">${v.status}</span></td>
+      <td>${v.cores??'-'}</td><td>${v.memory?v.memory+' Mo':'-'}</td>
+      <td><div class="actions">
+        <button class="sm ghost" onclick="powerVM(${v.vmid},'${v.status==='running'?'stop':'start'}')">${v.status==='running'?'Stop':'Start'}</button>
+        <button class="sm ghost" onclick="editVM(${v.vmid},${v.cores||1},${v.memory||1024})">Config</button>
+        <button class="sm ghost" onclick="sshTest(${v.vmid})">Test SSH</button>
+        <button class="sm danger" onclick="deleteVM(${v.vmid})">Suppr.</button>
+      </div></td></tr>`).join("");
+  }catch(e){tb.innerHTML=`<tr><td colspan="6" class="muted">${e.message}</td></tr>`;}
+}
+async function createVM(){
+  const name=document.getElementById("vmName").value.trim();
+  if(!name){toast("Nom de VM requis.",false);return;}
+  try{
+    const v=await api("/api/vms",{method:"POST",body:JSON.stringify({
+      name, cores:+document.getElementById("vmCores").value,
+      memory:+document.getElementById("vmMem").value,
+      disk_gb:+document.getElementById("vmDisk").value})});
+    toast(`VM '${v.name}' créée (id ${v.vmid}).`,true);
+    document.getElementById("vmName").value=""; loadVMs(); loadLogs();
+  }catch(e){toast(e.message,false);}
+}
+async function powerVM(id,action){
+  try{const d=await api(`/api/vms/${id}/${action}`,{method:"POST"});toast(d.message,true);loadVMs();loadLogs();}
+  catch(e){toast(e.message,false);}
+}
+async function editVM(id,cores,mem){
+  const c=prompt(`VM ${id} — nombre de vCPU :`, cores); if(c===null)return;
+  const m=prompt(`VM ${id} — RAM en Mo :`, mem); if(m===null)return;
+  try{await api(`/api/vms/${id}`,{method:"PUT",body:JSON.stringify({cores:+c,memory:+m})});
+    toast(`VM ${id} reconfigurée.`,true); loadVMs(); loadLogs();}
+  catch(e){toast(e.message,false);}
+}
+async function sshTest(id){
+  try{const d=await api(`/api/vms/${id}/ssh-test`,{method:"POST"});toast(d.message,d.ok);loadLogs();}
+  catch(e){toast(e.message,false);}
+}
+async function deleteVM(id){
+  if(!confirm(`Supprimer définitivement la VM ${id} ?`))return;
+  try{const d=await api(`/api/vms/${id}`,{method:"DELETE"});toast(d.message,true);loadVMs();loadLogs();}
+  catch(e){toast(e.message,false);}
+}
+async function deployService(){
+  const vmid=document.getElementById("svcVmid").value;
+  if(!vmid){toast("ID de la VM cible requis.",false);return;}
+  const body={service:document.getElementById("svcName").value};
+  const host=document.getElementById("svcHost").value.trim(); if(host)body.host=host;
+  try{const d=await api(`/api/vms/${vmid}/deploy-service`,{method:"POST",body:JSON.stringify(body)});
+    toast(d.message,true);loadLogs();}
+  catch(e){toast(e.message,false);}
+}
+
+/* ---------- Logs (US-006) ---------- */
+async function loadLogs(){
+  const box=document.getElementById("logBox");
+  const lvl=document.getElementById("logLevel").value;
+  try{
+    const rows=await api("/api/logs?limit=80"+(lvl?"&level="+lvl:""));
+    if(!rows.length){box.innerHTML='<div class="muted">Aucun évènement.</div>';return;}
+    box.innerHTML=rows.map(l=>`<div class="logline">
+      <span class="lvl ${l.level}">${l.level}</span>
+      <span class="muted">${l.ts.replace('T',' ').replace('+00:00','Z')}</span>
+      ${l.vmid?`<span class="muted"> vm:${l.vmid}</span>`:""}
+      &nbsp;${escapeHtml(l.message)}</div>`).join("");
+  }catch(e){box.innerHTML=`<div class="muted">${e.message}</div>`;}
+}
+function escapeHtml(s){return (s||"").replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+/* ---------- init ---------- */
+if(TOKEN){ enterApp(); }
+</script>
+</body>
+</html>

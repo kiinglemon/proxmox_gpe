@@ -1,0 +1,32 @@
+---
+# Déploiement d'un service Nginx de base sur une VM Linux (US-007).
+# Appelé par InfraOne : ansible-playbook deploy-nginx.yml -i "<ip>," -u <user>
+- name: Déployer Nginx (configuration de base)
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    site_title: "Déployé par InfraOne"
+  tasks:
+    - name: Installer le paquet nginx
+      ansible.builtin.package:
+        name: nginx
+        state: present
+
+    - name: Page d'accueil de démonstration
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        mode: "0644"
+        content: |
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <title>{{ site_title }}</title></head>
+          <body style="font-family:sans-serif;text-align:center;margin-top:12vh">
+          <h1>✅ Nginx déployé par InfraOne</h1>
+          <p>Hôte : {{ ansible_hostname }} — {{ ansible_default_ipv4.address | default('n/a') }}</p>
+          </body></html>
+
+    - name: Démarrer et activer nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
