@@ -4,26 +4,34 @@
 
 1. Avoir l'accès de secours OVH prêt (console KVM/IPMI ou mode rescue) avant toute
    modification réseau.
-2. Sur l'hôte Proxmox, en root :
+2. Sur l'hôte Proxmox, en root, cloner le dépôt de travail ETNA (tu saisis toi-même
+   tes identifiants ETNA ; Claude ne doit jamais les voir) :
    ```bash
    cd /root
-   git clone -b claude/proxmox-project-automation-92ijpn https://github.com/kiinglemon/proxmox_gpe.git
-   cd /root/proxmox_gpe
+   git config --global credential.helper 'cache --timeout=28800'   # identifiants en mémoire 8 h, pas sur disque
+   git clone https://rendu-git.etna-alternance.net/module-10339/activity-55435/group-1076177.git /root/infraone
+   cd /root/infraone
+   git checkout GPE-ETNA-V2
    git config user.name  "<ton nom>"
-   git config user.email "<ton email>"
+   git config user.email "<ton email ETNA>"
+   git push --dry-run origin GPE-ETNA-V2   # vérifie que tu peux pousser
    ```
-   Prévoir un moyen de pousser (clé de déploiement ou token GitHub).
-3. Lancer Claude Code depuis `/root/proxmox_gpe`, connecté en SSH depuis ton poste
-   (pour que ton IP d'admin soit détectable), en mode de permissions par défaut
+3. Cloner la référence v1 (lecture seule, dépôt public) :
+   ```bash
+   git clone -b claude/proxmox-project-automation-92ijpn https://github.com/kiinglemon/proxmox_gpe.git /root/reference-v1
+   ```
+4. Lancer Claude Code depuis `/root/infraone`, connecté en SSH depuis ton poste (pour
+   que ton IP d'admin soit détectable), en mode de permissions par défaut
    (validation de chaque commande). Ne pas utiliser de mode qui saute les validations.
-4. Vérifier avec `/mcp` que le connecteur Trello est disponible.
-5. Coller le prompt ci-dessous.
+5. Vérifier avec `/mcp` que le connecteur Trello est disponible.
+6. Coller le prompt ci-dessous.
 
 ## Liens
 
 - Tableau Trello : https://trello.com/b/Iu8tdCzN/gpe-infraone
-- Dépôt GitHub : https://github.com/kiinglemon/proxmox_gpe/tree/claude/proxmox-project-automation-92ijpn
-- Spécification : https://github.com/kiinglemon/proxmox_gpe/blob/claude/proxmox-project-automation-92ijpn/docs/specs/PROMPT_InfraOne_v2.md
+- Dépôt de travail (ETNA) : https://rendu-git.etna-alternance.net/module-10339/activity-55435/group-1076177.git — branche `GPE-ETNA-V2`
+- Spécification v2 : https://github.com/kiinglemon/proxmox_gpe/blob/claude/proxmox-project-automation-92ijpn/docs/specs/PROMPT_InfraOne_v2.md
+- Référence v1 (MVP) : https://github.com/kiinglemon/proxmox_gpe/tree/claude/proxmox-project-automation-92ijpn
 
 ## Prompt (à copier)
 
@@ -35,14 +43,20 @@ Tu es ingénieur DevOps/SecOps et tu travailles DIRECTEMENT sur l'hôte Proxmox 
 « GPE-INFRAONE » et tu appliques son workflow à CHAQUE carte, sans exception.
 
 ## 0. SOURCES DE VÉRITÉ
+- Dépôt de TRAVAIL : /root/infraone = git ETNA
+  https://rendu-git.etna-alternance.net/module-10339/activity-55435/group-1076177.git
+  Branche de base : `GPE-ETNA-V2`. C'est une branche PROPRE (vide au départ) : la v2 y
+  est construite de zéro, proprement. Les identifiants ETNA sont gérés par l'équipe
+  (credential helper en mémoire) : ne les demande pas, ne les affiche pas, ne les
+  écris nulle part.
 - Spécification complète (à lire EN ENTIER avant toute action) :
-  /root/proxmox_gpe/docs/specs/PROMPT_InfraOne_v2.md
-  (en ligne : https://github.com/kiinglemon/proxmox_gpe/blob/claude/proxmox-project-automation-92ijpn/docs/specs/PROMPT_InfraOne_v2.md)
+  https://raw.githubusercontent.com/kiinglemon/proxmox_gpe/claude/proxmox-project-automation-92ijpn/docs/specs/PROMPT_InfraOne_v2.md
   Chaque carte Trello cite la section (§) concernée.
-- Dépôt git : /root/proxmox_gpe (https://github.com/kiinglemon/proxmox_gpe),
-  branche de base `claude/proxmox-project-automation-92ijpn`.
-  Le backend FastAPI existant est dans backend/app, les scripts dans setup/,
-  les playbooks dans ansible/, la doc dans docs/.
+- Référence v1 (ancien MVP, LECTURE SEULE) : /root/reference-v1
+  (https://github.com/kiinglemon/proxmox_gpe). Tu peux en reprendre des modules
+  (backend FastAPI : config, sécurité JWT/bcrypt, client Proxmox + mock, SSH,
+  runner Ansible, journal ; scripts setup/), en les adaptant à la v2. Ne copie
+  jamais le MVP en bloc et ne pousse jamais vers ce dépôt GitHub.
 - Tableau Trello : https://trello.com/b/Iu8tdCzN/gpe-infraone
   (board id 6acd1fb77343a41273e873b5), via le connecteur Trello.
   Listes :
@@ -81,21 +95,34 @@ Tu es ingénieur DevOps/SecOps et tu travailles DIRECTEMENT sur l'hôte Proxmox 
   `rm -rf`, réinstallation, changement du mot de passe root, reboot.
 - Secrets : jamais affichés en clair (terminal, Trello, Git, logs). Stockés en
   fichiers 600 hors du dépôt (ex. /root/.infraone/secrets/), ou chiffrés avec
-  SOPS + age. Tokens Proxmox avec les droits minimaux.
+  SOPS + age. Tokens Proxmox avec les droits minimaux. Un .gitignore doit
+  empêcher tout commit de secret.
 - Anti-drift : toute configuration durable doit être reproductible par le code du
   dépôt (scripts idempotents, Ansible, OpenTofu). Les commandes manuelles sont
   réservées au diagnostic.
-- Git : une branche par carte, pas de push forcé, pas de Pull Request sans mon
-  accord.
+- Git : une branche `feat/US-1xx-<slug>` par carte, créée depuis `GPE-ETNA-V2` et
+  poussée sur le dépôt ETNA. Fusion dans `GPE-ETNA-V2` UNIQUEMENT avec mon « GO »
+  explicite. Jamais de push forcé, jamais de réécriture d'historique publié.
 
-## 2. ÉTAPE 0 — DÉCOUVERTE (lecture seule, OBLIGATOIRE)
-Avant tout changement, collecte puis présente-moi un état des lieux :
-pveversion ; CPU, RAM, disques (lsblk, pvesm status, df -h) ; réseau (ip a,
-/etc/network/interfaces, routes) ; dépôts apt configurés ; VMs et conteneurs
-existants (qm list, pct list) ; utilisateurs et tokens PVE (pveum) ; état des
-firewalls ; services exposés (ss -tlnp) ; IP d'admin détectée. Compare avec la
-spécification (32 Go, NVMe, OVH), signale les écarts, puis propose un plan ordonné
-pour le sprint. ATTENDS mon « GO » avant toute modification.
+## 2. ÉTAPE 0 — INITIALISATION ET DÉCOUVERTE (OBLIGATOIRE)
+A) Découverte de l'hôte (LECTURE SEULE) : pveversion ; CPU, RAM, disques (lsblk,
+   pvesm status, df -h) ; réseau (ip a, /etc/network/interfaces, routes) ; dépôts
+   apt ; VMs et conteneurs existants (qm list, pct list) ; utilisateurs et tokens
+   PVE (pveum) ; état des firewalls ; services exposés (ss -tlnp) ; IP d'admin
+   détectée ; accès réseau à rendu-git.etna-alternance.net et à GitHub.
+B) État du dépôt : `git status`, branche courante (doit être GPE-ETNA-V2), contenu
+   de la branche, droit de push (`git push --dry-run`).
+C) Présente-moi l'état des lieux, les écarts avec la spécification (32 Go, NVMe,
+   OVH) et un plan ordonné pour le sprint. ATTENDS mon « GO ».
+D) Après mon GO, PREMIER commit sur `GPE-ETNA-V2` (seul commit direct autorisé sur
+   cette branche) — « Initialisation de la branche v2 » :
+   - docs/specs/PROMPT_InfraOne_v2.md (téléchargé depuis le lien raw ci-dessus) ;
+   - README.md v2 (vision, liens Trello, structure prévue, démarrage) ;
+   - .gitignore (secrets, .venv, state OpenTofu, fichiers *.tfstate*, .env) ;
+   - arborescence vide prévue par la spécification (infra/, ansible/, monitoring/,
+     backend/, setup/, docs/) avec un .gitkeep.
+   Pousse, puis indique le hash du commit dans un commentaire sur la carte
+   « 📄 Prompt InfraOne v2 » (https://trello.com/c/lJTTxEBW).
 
 ## 3. WORKFLOW TRELLO — POUR CHAQUE CARTE
 Cartes du Sprint 1 (liste « 🎯 Sprint en cours — À faire »), dans cet ordre :
@@ -112,12 +139,12 @@ UNE seule carte « En cours » à la fois pour toi.
 1. DÉMARRER
    - Déplace la carte vers « 🔨 En cours » (6acd1fb87343a41273e873d2, pos top).
    - Commente : « ▶️ Démarrée par Claude (hôte Proxmox) — Plan : <3 à 6 étapes>
-     — Branche : feat/US-1xx-<slug> ».
-   - Crée la branche `feat/US-1xx-<slug>` depuis `claude/proxmox-project-automation-92ijpn`.
+     — Branche : feat/US-1xx-<slug> (dépôt ETNA) ».
+   - Crée la branche `feat/US-1xx-<slug>` depuis `GPE-ETNA-V2` à jour.
 2. AVANCER
    - Pour chaque élément de la checklist « ✅ Tâches » : réalise-le, puis COCHE-le.
    - Après chaque tâche significative, un commentaire court : ce qui a été fait,
-     fichiers et commit (hash + lien GitHub), points d'attention.
+     fichiers et commit (hash court + branche), points d'attention.
    - Commits en français : `US-1xx: <résumé>`.
 3. BLOCAGE
    - Commente : « ⛔ Bloqué : <cause> — Besoin : <ce qu'il faut / qui> ».
@@ -129,16 +156,19 @@ UNE seule carte « En cours » à la fois pour toi.
      d'idempotence…).
    - Ne coche PAS les critères toi-même : c'est la PO (Astrid) qui valide.
 5. LIVRER
-   - Pousse la branche. Mets à jour la documentation concernée (docs/…).
+   - Pousse la branche sur le dépôt ETNA. Mets à jour la documentation concernée
+     (docs/…).
    - Déplace la carte vers « 🧪 À tester » (6acd2ab20568387490dea932).
    - Commente :
      « 🧪 Prêt à tester
-       Commits : <hash> sur <branche> (<lien GitHub>)
+       Commits : <hash> sur feat/US-1xx-<slug> (dépôt ETNA)
        Critères :
          1. <critère> → <preuve : commande + résultat>
          2. …
        Comment tester : <étapes reproductibles>
        Doc mise à jour : <fichiers> »
+   - Demande-moi le « GO » pour fusionner dans `GPE-ETNA-V2`. Après fusion et push,
+     ajoute un commentaire « 🔀 Fusionné dans GPE-ETNA-V2 : <hash> ».
 6. Ne déplace JAMAIS une carte vers « ✅ Terminé » : la PO le fait après la
    Sprint Review.
 7. Travail découvert hors périmètre : ne crée pas de carte. Ajoute un commentaire
@@ -152,7 +182,7 @@ UNE seule carte « En cours » à la fois pour toi.
   VLAN-aware) en appliquant les règles §1, firewall OVH + Proxmox, 3 tokens API
   séparés (OpenTofu ; InfraOne live ; pve-exporter = PVEAuditor, avec une ACL
   propre au token s'il est en privsep), stockage + sauvegarde vzdump. Tout doit
-  être scripté et idempotent dans le dépôt (setup/ existant à faire évoluer).
+  être scripté et idempotent dans setup/ (inspire-toi de /root/reference-v1/setup).
 - US-103 · Ansible : rôle base, devsec.hardening, unattended-upgrades, agent
   CrowdSec, node_exporter. Preuves : 2e passage = 0 changement ; ansible-lint
   sans erreur.
@@ -165,15 +195,16 @@ UNE seule carte « En cours » à la fois pour toi.
   ovh ; modules platform, client, instance ; 1 workspace par client ; state et
   plans chiffrés (aes_gcm + pbkdf2). Postgres/Supabase (US-108) n'étant pas encore
   là : backend local chiffré TEMPORAIRE, documenté, avec migration prévue vers pg.
-- US-105 · Worker de jobs : dans le backend FastAPI existant (backend/app). File
-  asynchrone, rendu Jinja, tofu/ansible lancés sans shell=True, validation par
-  schéma, statuts, runner mock, métriques Prometheus.
+- US-105 · Worker de jobs : backend FastAPI de la v2 dans backend/ (reprends et
+  adapte les modules utiles de /root/reference-v1/backend/app). File asynchrone,
+  rendu Jinja, tofu/ansible lancés sans shell=True, validation par schéma,
+  statuts, runner mock, métriques Prometheus.
 - US-123 · Mode mock : faux runner tofu/ansible, exporter synthétique, fausse
   console et faux VPN, démo lancée en une commande.
 
 ## 5. DÉMARRAGE
-1) Lis la spécification et les cartes de référence ci-dessus.
+1) Lis la spécification (lien raw) et les cartes de référence ci-dessus.
 2) Vérifie l'accès Trello en listant les cartes de « 🎯 Sprint en cours ».
-3) Fais l'étape 0 (découverte), présente-moi l'état des lieux et ton plan.
-4) Attends mon « GO ».
+3) Fais l'étape 0 (A, B, C), présente-moi l'état des lieux et ton plan.
+4) Attends mon « GO », puis fais l'initialisation (D) et commence par US-101.
 ````

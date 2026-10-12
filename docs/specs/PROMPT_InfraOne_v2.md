@@ -4,9 +4,13 @@
 # d'images, monitoring automatique multi-clients (Prometheus/Grafana),
 # sécurité renforcée, UI sombre, documentation.
 
-Tu es ingénieur DevOps / SecOps / full-stack. Tu REPRENDS le projet InfraOne
-(TIC-GPE5, "Projet INFRA One"). Ne repars PAS de zéro : lis d'abord le dépôt
-(branche `claude/proxmox-project-automation-92ijpn`) et réutilise l'existant.
+Tu es ingénieur DevOps / SecOps / full-stack. Tu construis la v2 du projet InfraOne
+(TIC-GPE5, "Projet INFRA One") sur une BRANCHE PROPRE.
+- Dépôt de travail : git ETNA
+  https://rendu-git.etna-alternance.net/module-10339/activity-55435/group-1076177.git
+  Branche de base : `GPE-ETNA-V2` (vide au départ : la v2 y est construite proprement).
+- Référence (ancien MVP v1, à réutiliser PAR MORCEAUX si utile, jamais copié en bloc) :
+  https://github.com/kiinglemon/proxmox_gpe/tree/claude/proxmox-project-automation-92ijpn
 Livre PAR PHASES (section 14) : termine et teste une phase avant la suivante.
 
 ## 0. CONTEXTE & VISION
@@ -15,9 +19,10 @@ INFORMATIQUE (infogérance de PME) pour : provisionner l'infra de ses clients, l
 proposer un catalogue de services, gérer leurs postes Windows (domaine, déploiement
 d'images), et SUPERVISER AUTOMATIQUEMENT tout ce qui est créé. Multi-clients,
 cloisonnement strict.
-Existant : backend FastAPI (Python), auth JWT, logs formalisés, abstraction backend
-(Proxmox + Mock), SSH (paramiko), runner Ansible, UI légère servie par FastAPI,
-playbooks nginx/apache, setup/ idempotent, mode MOCK.
+Référence v1 réutilisable (dépôt GitHub ci-dessus) : backend FastAPI (Python), auth
+JWT, logs formalisés, abstraction backend (Proxmox + Mock), SSH (paramiko), runner
+Ansible, UI légère servie par FastAPI, playbooks nginx/apache, setup/ idempotent,
+mode MOCK. Reprends les modules utiles en les adaptant à la v2 (multi-tenant, IaC).
 CONTRAINTE : Python/FastAPI reste le cœur. Hôte = Proxmox VE sur OVH bare metal.
 
 ## 1. MODÈLE IaC — TOUT PILOTÉ PAR OPENTOFU/ANSIBLE
@@ -530,8 +535,9 @@ anti-IDOR (client et technicien), révocation VPN, activation d'un pack,
 cloisonnement Entra (mock), ENRÔLEMENT AUTOMATIQUE au monitoring (création →
 cible visible avec le bon tenant ; suppression → cible retirée), silence
 automatique à l'arrêt, ANTI-FUITE des métriques et des logs entre clients.
-Commits clairs sur `claude/proxmox-project-automation-92ijpn`. PAS de Pull Request
-sauf demande explicite.
+Commits clairs, une branche `feat/US-xxx-<slug>` par carte créée depuis `GPE-ETNA-V2`
+(dépôt git ETNA), fusionnée dans `GPE-ETNA-V2` uniquement avec l'accord explicite de
+l'équipe. Pas de push forcé.
 
 ## 14. DIMENSIONNEMENT & PHASES
 Serveur OVH 32 Go NVMe (3 à 5 clients Windows avec DC1 chez OVH ; prévoir 64 Go
